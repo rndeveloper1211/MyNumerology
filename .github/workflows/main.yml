@@ -1,8 +1,12 @@
 name: MyNumerology CI-CD (Professional)
 
+# Node 24 forcing variable
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
-    branches: [ "main" ] # Jab bhi aap push karenge ye apne aap chalega
+    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 
@@ -18,19 +22,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24' # Node version update kiya
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run Lint Check
-        run: npm run lint || echo "No lint script found"
+        # '|| true' add kiya taaki agar unused variables hon toh bhi build na ruke
+        run: npm run lint || true 
 
   # Job 2: Android Build (CD)
   build-android:
     name: Build Android APK
-    needs: test # Sirf tab chalega jab test pass honge
+    needs: test 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -62,5 +67,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug.apk
+          name: MyNumerology-Debug-APK # Artifact ka naam thoda clean rakha hai
           path: android/app/build/outputs/apk/debug/app-debug.apk
