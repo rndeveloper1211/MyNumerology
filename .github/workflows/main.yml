@@ -1,4 +1,4 @@
-name: MyNumerology CI-CD (Professional)
+name: MyNumerology Release Build
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -6,12 +6,10 @@ env:
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build-android:
-    name: Build Android APK
+    name: Build & Sign Release APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -24,7 +22,6 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        # Ye step bahut zaroori hai build se pehle
         run: npm install
 
       - name: Setup Java
@@ -32,6 +29,10 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
+
+      # IMPORTANT: Keystore Decode Step
+      - name: Decode Keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/my-upload-key.keystore
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -44,15 +45,25 @@ jobs:
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      - name: Build Debug APK
+      - name: Build Release APK
+        env:
+          # Secrets pass kar rahe hain build ke liye
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          MYAPP_UPLOAD_STORE_FILE: my-upload-key.keystore
         run: |
           cd android
-          # Gradlew ko executable banaya
           chmod +x gradlew
-          ./gradlew assembleDebug
+          # Professional Release Command
+          ./gradlew assembleRelease \
+            -PMYAPP_UPLOAD_STORE_FILE=$MYAPP_UPLOAD_STORE_FILE \
+            -PMYAPP_UPLOAD_STORE_PASSWORD=$MYAPP_UPLOAD_STORE_PASSWORD \
+            -PMYAPP_UPLOAD_KEY_ALIAS=$MYAPP_UPLOAD_KEY_ALIAS \
+            -PMYAPP_UPLOAD_KEY_PASSWORD=$MYAPP_UPLOAD_KEY_PASSWORD
 
-      - name: Upload APK
+      - name: Upload Signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyNumerology-Debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: MyNumerology-Release-Signed-APK
+          path: android/app/build/outputs/apk/release/app-release.apk
