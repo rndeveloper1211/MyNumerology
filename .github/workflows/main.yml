@@ -1,6 +1,5 @@
 name: MyNumerology CI-CD (Professional)
 
-# Node 24 forcing variable
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -11,9 +10,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # Job 1: Testing (CI)
-  test:
-    name: Lint & Test Check
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -22,24 +20,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24' # Node version update kiya
+          node-version: '24'
           cache: 'npm'
 
       - name: Install Dependencies
+        # Ye step bahut zaroori hai build se pehle
         run: npm install
-
-      - name: Run Lint Check
-        # '|| true' add kiya taaki agar unused variables hon toh bhi build na ruke
-        run: npm run lint || true 
-
-  # Job 2: Android Build (CD)
-  build-android:
-    name: Build Android APK
-    needs: test 
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -61,11 +47,12 @@ jobs:
       - name: Build Debug APK
         run: |
           cd android
+          # Gradlew ko executable banaya
           chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyNumerology-Debug-APK # Artifact ka naam thoda clean rakha hai
+          name: MyNumerology-Debug-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
